@@ -24,8 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             die("Invalid role selected.");
     }
 
-    $sql = "SELECT * FROM $table WHERE userName = ? AND password = ?";
-    $params = array($userName, $password);
+    $sql = "SELECT * FROM $table WHERE userName = ?";
+    $params = array($userName);
     $stmt = sqlsrv_prepare($conn, $sql, $params);
 
     if (!$stmt) {
@@ -33,10 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (sqlsrv_execute($stmt) && sqlsrv_fetch($stmt)) {
-        $_SESSION['userName'] = $userName;
-        $_SESSION['role'] = $role;
-        header("Location: dashboard.php");
-        exit();
+        $hashedPassword = sqlsrv_get_field($stmt, 3);
+        if (password_verify($password, $hashedPassword)) {
+            $_SESSION['userName'] = $userName;
+            $_SESSION['role'] = $role;
+            header("Location: dashboard.php");
+            exit();
     } else {
         echo "<p style='color:red;'>❌ Invalid username or password. Please try again.</p>";
     }
@@ -44,4 +46,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // If not submitted via POST, show the login form (optional)
     echo "<p style='color:orange;'>Please login using the form.</p>";
 }
-?>
+}
