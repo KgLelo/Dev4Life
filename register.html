@@ -120,6 +120,19 @@
 
       return true;
     }
+
+    // Show/hide fields based on role
+    function handleRoleChange() {
+      const role = document.querySelector('select[name="role"]').value;
+      document.getElementById('grade-group').style.display = (role === 'learner') ? 'block' : 'none';
+      document.getElementById('province-group').style.display = (role === 'teacher' || role === 'learner') ? 'block' : 'none';
+      document.getElementById('school-group').style.display = (role === 'teacher' || role === 'learner') ? 'block' : 'none';
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      document.querySelector('select[name="role"]').addEventListener('change', handleRoleChange);
+      handleRoleChange(); // Initialize on load
+    });
   </script>
 </head>
 <body>
@@ -148,8 +161,44 @@
       <label>Phone Number:</label>
       <input type="text" name="phoneNum" required>
 
-      <label>Address:</label>
-      <input type="text" name="address">
+      <div id="province-group">
+      <label for="province">Province:</label>
+      <select name="province" required>
+        <option value="">-- Select Province --</option>
+        <script>
+          const provinces = ["Gauteng", "KwaZulu-Natal", "Western Cape", "Eastern Cape", "Free State", "Limpopo", "Mpumalanga", "North West", "Northern Cape"];
+          provinces.forEach(province => {
+            document.write(`<option value="${province}">${province}</option>`);
+          });
+        </script>
+      </select>
+      </div>
+      
+        <div id="school-group">
+        <label for="schools">School:</label>
+        <select name="schools">
+          <option value="">-- Select School --</option>
+          <script>
+            const schools = ["School A", "School B", "School C", "School D", "School E"];
+            schools.forEach(school => {
+              document.write(`<option value="${school}">${school}</option>`);
+            });
+          </script>
+        </select>
+      </div>
+
+      <div id="grade-group">
+        <label for="grade">Grade:</label>
+        <select name="grade">
+          <option value="">-- Select Grade --</option>
+          <script>
+            const grades = ["Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
+            grades.forEach(grade => {
+              document.write(`<option value="${grade}">${grade}</option>`);
+            });
+          </script>
+        </select>
+      </div>
 
       <button type="submit">Register</button>
     </form>
