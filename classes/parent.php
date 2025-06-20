@@ -51,8 +51,8 @@ class ParentUser {
         $conn = connectToDatabase();
 
         // Check if the user already exists in any of the tables
-        if ($this->CheckUser($conn, $this->userName) === true) {
-            echo "<p style='color:red;'>❌ Username already exists. Please login.</p>";
+       if ($this->CheckUser($conn, $this->userName) === true) {
+            header("Location: register.html?error=username_exists");
             exit();
         } else {
         // Prepare the SQL statement to insert the new parent user
@@ -67,14 +67,13 @@ class ParentUser {
         $stmt = sqlsrv_prepare($conn, $sql, $params);
 
         if ($stmt === false) {
-            // Handle error
-            return array('success' => false, 'error' => sqlsrv_errors());
+                header("Location: register.html?error=registration_failed");
+                exit();
         }
 
         if (sqlsrv_execute($stmt)) {
             // Registration successful
-            echo "<p style='color:green;'>✅ Parent registered successfully. Please login.</p>";
-            header("Location: login.html");
+            header("Location: register.html?success=parent_registered");
             exit();
         } else {
             die("Error registering parent: " . print_r(sqlsrv_errors(), true));
