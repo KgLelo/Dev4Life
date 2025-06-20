@@ -13,14 +13,17 @@ class TeacherUser extends ParentUser {
         $this->phoneNum = $phoneNum;
         $this->province = $province;
         $this->school = $school;
-        $this->CheckUser(); // Check if user already exists
     }
 
     // Override register method to include province and school
     public function register() {
         $conn = connectToDatabase();
 
-        $sql = "INSERT INTO {$this->table} (fullName, userName, password, phoneNum, province, school) VALUES (?, ?, ?, ?, ?, ?)";
+        if ($this->CheckUser($conn, $this->userName) === true) {
+            echo "<p style='color:red;'>❌ Username already exists. Please login.</p>";
+            exit();
+        } else {
+            $sql = "INSERT INTO {$this->table} (fullName, userName, password, phoneNum, province, school) VALUES (?, ?, ?, ?, ?, ?)";
         $params = array(
             $this->fullName,
             $this->userName,
@@ -46,5 +49,6 @@ class TeacherUser extends ParentUser {
 
         sqlsrv_free_stmt($stmt);
         sqlsrv_close($conn);
+        }
     }
 }
