@@ -34,17 +34,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Location: dashboard.php");
                 exit();
             } else {
-                $found = true; // Username found, but password incorrect
-                break;
+                // Username found, but password incorrect
+                header("Location: login.html?error=invalid_password");
+                exit();
             }
         }
     }
 
-    if ($found) {
-        echo "<p style='color:red;'>❌ Invalid password. Please try again.</p>";
-    } else {
-        echo "<p style='color:red;'>❌ Username not found. Please try again.</p>";
-    }
-} else {
-    echo "<p style='color:orange;'>Please login using the form.</p>";
+    // Username not found
+    header("Location: login.html?error=user_not_found");
+    exit();
 }
