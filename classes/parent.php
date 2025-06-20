@@ -51,7 +51,7 @@ class ParentUser {
         $conn = connectToDatabase();
 
         // Check if the user already exists in any of the tables
-        if ($this->CheckUser($conn, $userName) === true) {
+        if ($this->CheckUser($conn, $this->userName) === true) {
             echo "<p style='color:red;'>❌ Username already exists. Please login.</p>";
             exit();
         } else {
