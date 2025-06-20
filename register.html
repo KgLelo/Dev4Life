@@ -203,6 +203,7 @@
       <button type="submit">Register</button>
     </form>
 
+    <div id="register-message" style="display:none; margin-top:15px; color:#fff; border-radius:6px; padding:10px; font-weight:bold;"></div>
     <hr>
 
     <p>Already have an account?</p>
@@ -211,5 +212,41 @@
     </form>
   </div>
 
+  <script>
+  // Show message if present in URL
+  const params = new URLSearchParams(window.location.search);
+  const msgDiv = document.getElementById('register-message');
+  if (params.has('error')) {
+    let msg = '';
+    if (params.get('error') === 'username_exists') {
+      msg = '❌ Username already exists. Please login.';
+      msgDiv.style.background = '#e74c3c';
+    } else if (params.get('error') === 'registration_failed') {
+      msg = '❌ Registration failed. Please try again.';
+      msgDiv.style.background = '#e74c3c';
+    }
+    if (msg) {
+      msgDiv.textContent = msg;
+      msgDiv.style.display = 'block';
+    }
+  }
+  if (params.has('success')) {
+    let msg = '';
+    if (params.get('success') === 'parent_registered') {
+      msg = '✅ Parent registered successfully. Please login.';
+      msgDiv.style.background = '#27ae60';
+    } else if (params.get('success') === 'teacher_registered') {
+      msg = '✅ Teacher registered successfully. Please login.';
+      msgDiv.style.background = '#27ae60';
+    } else if (params.get('success') === 'learner_registered') {
+      msg = '✅ Learner registered successfully. Please login.';
+      msgDiv.style.background = '#27ae60';
+    }
+    if (msg) {
+      msgDiv.textContent = msg;
+      msgDiv.style.display = 'block';
+    }
+  }
+</script>
 </body>
 </html>
