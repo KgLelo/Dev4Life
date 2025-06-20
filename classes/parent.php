@@ -13,40 +13,50 @@ class ParentUser {
         $this->userName = $userName;
         $this->password = password_hash($password, PASSWORD_DEFAULT); // Secure password hash
         $this->phoneNum = $phoneNum;
-        $this->CheckUser(); // Check if user already exists
+        
     }
 
-    public function CheckUser() {
-        $conn = connectToDatabase();
+    public function CheckUser($conn, $userName) {
+    $allTables = [
+        'TeacherTable' => 'teacher',
+        'LearnerTable' => 'learner',
+        'ParentTable'  => 'parent'
+    ];
 
-        // Use $this->table and curly braces in double quotes
-        $checkSql = "SELECT * FROM {$this->table} WHERE userName = ?";
-        $checkParams = array($this->userName);
+    foreach ($allTables as $current => $role) {
+        $checkSql = "SELECT * FROM $current WHERE userName = ?";
+        $checkParams = array($userName);
         $checkStmt = sqlsrv_prepare($conn, $checkSql, $checkParams);
 
         if (!$checkStmt) {
-            die(print_r(sqlsrv_errors(), true));
+            sqlsrv_close($conn);
+            return false;
         }
 
         if (sqlsrv_execute($checkStmt)) {
             if (sqlsrv_fetch($checkStmt)) {
                 // User already exists
-                echo "<p style='color:red;'>❌ Username already exists. Please login.</p>";
-                exit();
+                sqlsrv_free_stmt($checkStmt);
+                sqlsrv_close($conn);
+                return true;
             }
-        } else {
-            die(print_r(sqlsrv_errors(), true));
         }
 
         sqlsrv_free_stmt($checkStmt);
-        sqlsrv_close($conn);
     }
+    return false; // Not found
+}
 
     public function register() {
         $conn = connectToDatabase();
 
-        // Use curly braces for property in double quotes
-        $sql = "INSERT INTO {$this->table} (fullName, userName, password, phoneNum) VALUES (?, ?, ?, ?)";
+        // Check if the user already exists in any of the tables
+       if ($this->CheckUser($conn, $this->userName) === true) {
+            header("Location: register.html?error=username_exists");
+            exit();
+        } else {
+        // Prepare the SQL statement to insert the new parent user
+            $sql = "INSERT INTO {$this->table} (fullName, userName, password, phoneNum) VALUES (?, ?, ?, ?)";
         $params = array(
             $this->fullName,
             $this->userName,
@@ -57,14 +67,13 @@ class ParentUser {
         $stmt = sqlsrv_prepare($conn, $sql, $params);
 
         if ($stmt === false) {
-            // Handle error
-            return array('success' => false, 'error' => sqlsrv_errors());
+                header("Location: register.html?error=registration_failed");
+                exit();
         }
 
         if (sqlsrv_execute($stmt)) {
             // Registration successful
-            echo "<p style='color:green;'>✅ Parent registered successfully. Please login.</p>";
-            header("Location: login.html");
+            header("Location: register.html?success=parent_registered");
             exit();
         } else {
             die("Error registering parent: " . print_r(sqlsrv_errors(), true));
@@ -72,5 +81,7 @@ class ParentUser {
 
         sqlsrv_free_stmt($stmt);
         sqlsrv_close($conn);
+        }
+        
     }
 }

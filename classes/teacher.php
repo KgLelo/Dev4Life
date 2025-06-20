@@ -13,14 +13,17 @@ class TeacherUser extends ParentUser {
         $this->phoneNum = $phoneNum;
         $this->province = $province;
         $this->school = $school;
-        $this->CheckUser(); // Check if user already exists
     }
 
     // Override register method to include province and school
     public function register() {
         $conn = connectToDatabase();
 
-        $sql = "INSERT INTO {$this->table} (fullName, userName, password, phoneNum, province, school) VALUES (?, ?, ?, ?, ?, ?)";
+        if ($this->CheckUser($conn, $this->userName) === true) {
+            header("Location: register.html?error=username_exists");
+            exit();
+        } else {
+            $sql = "INSERT INTO {$this->table} (fullName, userName, password, phoneNum, province, school) VALUES (?, ?, ?, ?, ?, ?)";
         $params = array(
             $this->fullName,
             $this->userName,
@@ -33,18 +36,20 @@ class TeacherUser extends ParentUser {
         $stmt = sqlsrv_prepare($conn, $sql, $params);
 
         if ($stmt === false) {
-            return array('success' => false, 'error' => sqlsrv_errors());
+           header("Location: register.html?error=registration_failed");
+            exit();
         }
 
         if (sqlsrv_execute($stmt)) {
-            echo "<p style='color:green;'>✅ Teacher registered successfully. Please login.</p>";
-            header("Location: login.html");
+            header("Location: register.html?success=teacher_registered");
             exit();
         } else {
-            die("Error registering teacher: " . print_r(sqlsrv_errors(), true));
+            header("Location: register.html?error=registration_failed");
+            exit();
         }
 
         sqlsrv_free_stmt($stmt);
         sqlsrv_close($conn);
+        }
     }
 }
