@@ -1,3 +1,26 @@
+<?php
+//session_start();
+if (!isset($_SESSION['userName']) || !isset($_SESSION['role'])) {
+    header("Location: login.php");
+    exit();
+}
+require 'connect.php';
+$conn = connectToDatabase();
+
+// Fetch all school events
+$schoolEvents = [];
+$sql = "SELECT eventTitle, eventDate FROM SchoolEvents";
+$stmt = sqlsrv_query($conn, $sql);
+while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    $eventDate = $row['eventDate'];
+    if ($eventDate instanceof DateTime) {
+        $schoolEvents[] = [
+            'date' => $eventDate->format('Y-m-d'),
+            'title' => $row['eventTitle']
+        ];
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,7 +31,11 @@
       font-family: Arial, sans-serif;
       background-color: #f4f8fb;
       margin: 0;
-      padding: 0;
+      padding: 20px;
+      background-image: url('images/img12.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
     }
 
     header {
@@ -34,10 +61,6 @@
       transition: background 0.3s ease;
     }
 
-    .back-btn:hover {
-      background-color: #e6e6e6;
-    }
-
     .container {
       max-width: 900px;
       margin: 30px auto;
@@ -45,6 +68,68 @@
       background-color: white;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      gap: 5px;
+    }
+
+    .calendar-grid div {
+      padding: 10px;
+      border-radius: 5px;
+      position: relative;
+    }
+
+    .day-name {
+      font-weight: bold;
+      background-color: #e0e7f4;
+    }
+
+    .day {
+      cursor: pointer;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+    }
+
+    .holiday-public {
+      background-color: #ffdddd;
+      border: 2px solid #ff5555;
+    }
+
+    .holiday-school {
+      background-color: #fffcc9;
+      border: 2px solid #cccc66;
+    }
+
+    .holiday-event {
+      background-color: #e0ffe0;
+      border: 2px solid #33cc33;
+    }
+
+    .today {
+      border: 3px solid #004aad;
+      background-color: #cce5ff;
+    }
+
+    .legend span {
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      margin-right: 8px;
+      border-radius: 3px;
+    }
+
+    .public { background-color: #ffdddd; }
+    .school { background-color: #fffcc9; }
+    .event { background-color: #e0ffe0; }
+    .today-mark { background-color: #cce5ff; border: 1px solid #004aad; }
+
+    .legend {
+      margin-top: 15px;
+      font-size: 0.95em;
     }
 
     .calendar-nav {
@@ -66,89 +151,16 @@
       background-color: #003579;
     }
 
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      text-align: center;
-      gap: 5px;
+    .back-btn:hover {
+      background-color: #e6e6e6;
     }
-
-    .calendar-grid div {
-      padding: 10px;
-      border-radius: 5px;
-    }
-
-    .calendar-grid .day-name {
-      font-weight: bold;
-      background-color: #e0e7f4;
-    }
-
-    .calendar-grid .day {
-      cursor: pointer;
-      background-color: #f9f9f9;
-    }
-
-    .calendar-grid .holiday-public {
-      background-color: #ffdddd;
-      border: 1px solid #ff9999;
-    }
-
-    .calendar-grid .holiday-school {
-      background-color: #ffffcc;
-      border: 1px solid #cccc66;
-    }
-
-    .calendar-grid .today {
-      border: 2px solid #004aad;
-    }
-
-    .school-holiday-cards {
-      margin-top: 40px;
-    }
-
-    .school-holiday {
-      background-color: #e6f0fa;
-      border-left: 6px solid #004aad;
-      padding: 10px 15px;
-      margin-bottom: 15px;
-      border-radius: 5px;
-    }
-
-    .school-holiday h2 {
-      margin: 0 0 5px;
-      font-size: 1.2em;
-      color: #004aad;
-    }
-
-    .school-holiday p {
-      margin: 0;
-      font-size: 1em;
-      color: #333;
-    }
-
-    .legend {
-      margin-top: 15px;
-      font-size: 0.95em;
-    }
-
-    .legend span {
-      display: inline-block;
-      width: 15px;
-      height: 15px;
-      margin-right: 8px;
-      border-radius: 3px;
-    }
-
-    .legend .public { background-color: #ffdddd; }
-    .legend .school { background-color: #ffffcc; }
-
   </style>
 </head>
 <body>
 
 <header>
-  <h1>📅 School Holidays Calender</h1>
-  <a href="dashboard.php" class="back-btn">← Back to Dashboard</a>
+  <h1>📅 School Holidays & Events Calendar</h1>
+  <a href="dashboard.php" class="back-btn">← About Us!</a>
 </header>
 
 <div class="container">
@@ -161,33 +173,18 @@
   <div class="calendar-grid" id="calendar"></div>
 
   <div class="legend">
-    <p><span class="public"></span> Public Holiday &nbsp;&nbsp;&nbsp; <span class="school"></span> School Holiday</p>
-  </div>
-
-  <div class="school-holiday-cards">
-    <h2>🎓 School Holidays</h2>
-
-    <div class="school-holiday">
-      <h2>Winter Break</h2>
-      <p>June 15 – July 8</p>
-    </div>
-
-    <div class="school-holiday">
-      <h2>Spring Recess</h2>
-      <p>September 23 – October 2</p>
-    </div>
-
-    <div class="school-holiday">
-      <h2>Summer Holidays</h2>
-      <p>December 10 – January 15</p>
-    </div>
+    <p>
+      <span class="public"></span> Public Holiday &nbsp;&nbsp;
+      <span class="school"></span> School Holiday &nbsp;&nbsp;
+      <span class="event"></span> School Event &nbsp;&nbsp;
+      <span class="today-mark"></span> Today
+    </p>
   </div>
 </div>
 
 <script>
   const calendarEl = document.getElementById("calendar");
   const monthYearLabel = document.getElementById("monthYearLabel");
-
   let currentDate = new Date();
 
   const publicHolidays = {
@@ -204,20 +201,21 @@
   };
 
   const schoolHolidays = [
-    { start: "2025-06-15", end: "2025-07-08", name: "Winter Break" },
-    { start: "2025-09-23", end: "2025-10-02", name: "Spring Recess" },
+    { start: "2025-03-28", end: "2025-04-08", name: "Autumn Holidays" },
+    { start: "2025-06-27", end: "2025-07-22", name: "Winter Break" },
+    { start: "2025-10-03", end: "2025-10-13", name: "Spring Recess" },
     { start: "2025-12-10", end: "2026-01-15", name: "Summer Holidays" }
   ];
 
-  function formatDateKey(date) {
-    return date.toISOString().split("T")[0];
+  const schoolEvents = <?= json_encode($schoolEvents); ?>;
+
+  function formatLocalDateKey(date) {
+    return date.toLocaleDateString('en-CA'); // YYYY-MM-DD
   }
 
   function isSchoolHoliday(dateStr) {
     const date = new Date(dateStr);
-    return schoolHolidays.find(h => {
-      return new Date(h.start) <= date && date <= new Date(h.end);
-    });
+    return schoolHolidays.find(h => new Date(h.start) <= date && date <= new Date(h.end));
   }
 
   function renderCalendar() {
@@ -226,19 +224,14 @@
 
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
+    const todayStr = formatLocalDateKey(new Date());
 
-    const startDay = firstDay.getDay(); // 0 (Sun) - 6 (Sat)
-    const todayStr = formatDateKey(new Date());
-
-    const monthNames = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
-    ];
-
+    const startDay = (firstDay.getDay() + 6) % 7; // start Monday
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     monthYearLabel.textContent = `${monthNames[month]} ${year}`;
     calendarEl.innerHTML = "";
 
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayNames = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
     dayNames.forEach(d => {
       const dayEl = document.createElement("div");
       dayEl.textContent = d;
@@ -246,34 +239,36 @@
       calendarEl.appendChild(dayEl);
     });
 
-    // Empty blocks before the 1st day
-    for (let i = 0; i < startDay; i++) {
-      calendarEl.appendChild(document.createElement("div"));
-    }
+    for (let i = 0; i < startDay; i++) calendarEl.appendChild(document.createElement("div"));
 
     for (let day = 1; day <= lastDay.getDate(); day++) {
       const date = new Date(year, month, day);
-      const dateKey = formatDateKey(date);
+      const dateKey = formatLocalDateKey(date);
       const dayDiv = document.createElement("div");
       dayDiv.classList.add("day");
+      dayDiv.textContent = day;
 
-      // Highlight today
       if (dateKey === todayStr) dayDiv.classList.add("today");
-
-      // Public holiday
       if (publicHolidays[dateKey]) {
         dayDiv.classList.add("holiday-public");
+        dayDiv.title = publicHolidays[dateKey];
         dayDiv.onclick = () => alert("📍 Public Holiday: " + publicHolidays[dateKey]);
       }
 
-      // School holiday
       const schoolHoliday = isSchoolHoliday(dateKey);
       if (schoolHoliday) {
         dayDiv.classList.add("holiday-school");
+        dayDiv.title = schoolHoliday.name;
         dayDiv.onclick = () => alert("📚 School Holiday: " + schoolHoliday.name);
       }
 
-      dayDiv.textContent = day;
+      const event = schoolEvents.find(e => e.date === dateKey);
+      if (event) {
+        dayDiv.classList.add("holiday-event");
+        dayDiv.title = event.title;
+        dayDiv.onclick = () => alert("🎉 School Event: " + event.title);
+      }
+
       calendarEl.appendChild(dayDiv);
     }
   }

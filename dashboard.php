@@ -12,17 +12,21 @@ $allowed_pages = [
   'study_materials',
   'meetings',
   'school_events',
-  'exams_tests'
+  'exams/Tests',
+  'news/Announcements', 
+  'testimonials'  
 ];
 
 $page = isset($_GET['page']) && in_array($_GET['page'], $allowed_pages) ? $_GET['page'] : 'welcome';
 
-$page_file_map = [
+$page_file_map = [ // Mapping for news feature
   'school_calendar' => 'school_calendar.php',
   'study_materials' => 'study_materials.php',
   'meetings' => 'meetings.php',
   'school_events' => 'school_events.php',
-  'exams_tests' => 'exams_tests.php',
+  'exams/Tests' => 'exams_tests.php',
+  'news/Announcements' => 'news.php', 
+  'testimonials' => 'testimonials.php',  
   'welcome' => 'welcome.php'
 ];
 ?>
@@ -146,7 +150,9 @@ $page_file_map = [
           'study_materials' => '📚',
           'meetings' => '🧑‍🏫',
           'school_events' => '🎉',
-          'exams_tests' => '📝'
+          'exams/Tests' => '📝',
+          'news/Announcements' => '📰', 
+          'testimonials' => '💬'  
         ];
         foreach ($allowed_pages as $p) {
           $active = ($page === $p) ? 'active' : '';

@@ -1,5 +1,8 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if (!isset($_SESSION['userName']) || !isset($_SESSION['role'])) {
     header("Location: login.php");
     exit();
@@ -67,6 +70,11 @@ for ($g = 8; $g <= 12; $g++) {
             background: #f4f6fb;
             margin: 0;
             padding: 20px;
+            background-image: url('images/img12.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+    
         }
         h1, h2, h3 {
             color: #004aad;
@@ -206,7 +214,7 @@ for ($g = 8; $g <= 12; $g++) {
         <?php endforeach; ?>
     </div>
 
-    <a href="dashboard.php" class="back-link">← Back to Dashboard</a>
+    <a href="dashboard.php" class="back-link">← About Us</a>
 </div>
 
 </body>
