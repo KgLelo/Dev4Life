@@ -1,5 +1,5 @@
 <?php
-session_start();
+//session_start();
 if (!isset($_SESSION['userName']) || !isset($_SESSION['role'])) {
     header("Location: login.php");
     exit();
@@ -92,7 +92,7 @@ $result = sqlsrv_query($conn, $query, $params);
 <head>
     <title>Exams & Tests</title>
     <style>
-        body { font-family: Arial; background-color: #f4f6fb; padding: 30px; }
+        body { font-family: Arial; background-color: #f4f6fb; margin: 0;  padding: 30px;background-image: url('images/img12.jpg'); background-size: cover; background-position: center; background-attachment: fixed; }
         h1 { color: #004aad; text-align: center; }
         table { width: 95%; margin: 20px auto; border-collapse: collapse; background: #fff; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
         th, td { padding: 10px; border-bottom: 1px solid #ddd; }
@@ -223,7 +223,7 @@ $result = sqlsrv_query($conn, $query, $params);
     <?php endwhile; ?>
 </table>
 
-<a href="dashboard.php" class="back-link">← Back to Dashboard</a>
+<a href="dashboard.php" class="back-link">← About Us</a>
 
 </body>
 </html>

@@ -1,174 +1,192 @@
 <?php
-session_start();
-if (!isset($_SESSION['userName']) || !isset($_SESSION['role'])) {
-    header("Location: login.php");
-    exit();
+require_once 'connect.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-require 'connect.php';
 $conn = connectToDatabase();
 
-$role = strtolower($_SESSION['role']);
-$userName = $_SESSION['userName'];
-$isTeacher = $role === 'teacher';
-$message = "";
+$role = strtolower($_SESSION['role'] ?? '');
+$userName = $_SESSION['userName'] ?? '';
+$school = $_SESSION['school'] ?? '';
+$grade = $_SESSION['grade'] ?? '';
 
-// Email and SMS sending functions
-function sendEmail($to, $subject, $body) {
-    echo "<!-- Email to $to: $subject\n$body -->";
+if (!$userName || !$role) {
+    die("Unauthorized access. Please login.");
 }
 
-function sendSMS($number, $message) {
-    echo "<!-- SMS to $number: $message -->";
-}
+// Handle meeting request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedule_meeting'])) {
+    $teacher = $_POST['teacher'] ?? '';
+    $date = $_POST['date'] ?? '';
+    $time = $_POST['time'] ?? '';
+    $topic = $_POST['topic'] ?? '';
 
-// Create or update meeting
-if ($isTeacher && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['title'])) {
-    $title = $_POST['title'];
-    $meeting_date = $_POST['meeting_date'];
-    $meeting_time = $_POST['meeting_time'];
-    $link = $_POST['link'];
-
-    $parentName = $_POST['parent_name'];
-    $parentEmail = $_POST['parent_email'];
-    $parentPhone = $_POST['parent_phone'];
-
-    $learnerName = $_POST['learner_name'];
-    $learnerEmail = $_POST['learner_email'];
-    $learnerPhone = $_POST['learner_phone'];
-
-    $stmt = sqlsrv_query($conn, "INSERT INTO meetings (title, meeting_date, meeting_time, link, created_by) OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?)", [
-        $title, $meeting_date, $meeting_time, $link, $userName
-    ]);
-
-    if ($stmt === false) {
-        die(print_r(sqlsrv_errors(), true));
-    }
-
-    if ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-        $meetingId = $row['id'];
-        $message = "Meeting created and invitations sent.";
-
-        $participants = [
-            ['name' => $parentName, 'email' => $parentEmail, 'phone' => $parentPhone],
-            ['name' => $learnerName, 'email' => $learnerEmail, 'phone' => $learnerPhone]
-        ];
-
-        foreach ($participants as $p) {
-            $acceptUrl = "http://yourdomain.com/respond.php?meeting_id=$meetingId&user=" . urlencode($p['name']) . "&response=accepted";
-            $declineUrl = "http://yourdomain.com/respond.php?meeting_id=$meetingId&user=" . urlencode($p['name']) . "&response=declined";
-
-            $msg = "You're invited to a meeting:\nTitle: $title\nDate: $meeting_date\nTime: $meeting_time\nLink: $link\nAccept: $acceptUrl\nDecline: $declineUrl";
-
-            sendEmail($p['email'], "Meeting Invite: $title", nl2br($msg));
-            sendSMS($p['phone'], $msg);
-        }
-    } else {
-        $message = "Failed to create meeting.";
-    }
-}
-
-// Handle Accept/Decline from links
-if (isset($_GET['meeting_id']) && isset($_GET['user']) && isset($_GET['response'])) {
-    $meetingId = intval($_GET['meeting_id']);
-    $username = $_GET['user'];
-    $response = $_GET['response'];
-    $reason = isset($_POST['reason']) ? $_POST['reason'] : '';
-
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' || $response === 'accepted') {
-        $stmt = sqlsrv_query($conn, "INSERT INTO meeting_responses (meeting_id, user_name, response, reason) VALUES (?, ?, ?, ?)", [
-            $meetingId, $username, $response, $reason
+    if ($teacher && $date && $time && $topic) {
+        $stmt = sqlsrv_query($conn, "INSERT INTO meetings 
+            (school, grade, requester, role, teacher, topic, date, time, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')", [
+                $school, $grade, $userName, $role, $teacher, $topic, $date, $time
         ]);
-        $message = $stmt ? "Response recorded. Thank you." : "Failed to save response.";
+
+        echo $stmt
+            ? "<p style='color:green;'>✅ Meeting request sent to <strong>$teacher</strong>.</p>"
+            : "<p style='color:red;'>❌ Failed to send request.</p>";
     }
 }
 
-// Delete Meeting
-if ($isTeacher && isset($_GET['delete'])) {
-    $deleteId = intval($_GET['delete']);
-    sqlsrv_query($conn, "DELETE FROM meetings WHERE id=?", [$deleteId]);
-    header("Location: meetings.php");
-    exit();
-}
+// Handle approval/decline by teacher
+if ($role === 'teacher' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['decision'])) {
+    $decision = $_POST['decision'];
+    $meeting_id = $_POST['meeting_id'];
+    $status = $decision === 'approve' ? 'approved' : 'declined';
 
-// Fetch meetings
-$meetings = [];
-$stmt = sqlsrv_query($conn, "SELECT * FROM meetings ORDER BY meeting_date ASC");
-if ($stmt !== false) {
-    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-        $meetings[] = $row;
-    }
-} else {
-    die("Error loading meetings: " . print_r(sqlsrv_errors(), true));
+    sqlsrv_query($conn, "UPDATE meetings SET status = ? WHERE id = ? AND teacher = ?", [
+        $status, $meeting_id, $userName
+    ]);
 }
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Meetings - WeConnect</title>
+    <meta charset="UTF-8">
+    <title>Schedule Meeting</title>
     <style>
-        body { font-family: Arial; background: #f8f9fa; }
-        .container { width: 90%; margin: 2em auto; background: white; padding: 20px; border-radius: 8px; }
-        input, select, textarea { width: 100%; margin: 5px 0; padding: 8px; }
-        .btn { background: #004aad; color: white; padding: 10px 20px; border: none; margin-top: 10px; }
-        .btn:hover { background: #003380; }
-        .message { background: #e0ffe0; padding: 10px; margin-bottom: 10px; }
-        .meeting { border-top: 1px solid #ccc; margin-top: 20px; padding-top: 10px; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f9f9f9;
+            padding: 30px;
+            color: #333;
+        }
+        .container {
+            max-width: 950px;
+            margin: auto;
+        }
+        .form-section, .requests {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        h3 {
+            color: #004aad;
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 6px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background: #004aad;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #003088;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        table th {
+            background: #004aad;
+            color: white;
+        }
+        .action-buttons form {
+            display: inline-block;
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>📅 Meetings</h2>
-    <?php if ($message): ?>
-        <div class="message"><?php echo $message; ?></div>
-    <?php endif; ?>
 
-    <?php if ($isTeacher): ?>
-        <form method="POST">
-            <h3>Create Meeting</h3>
-            <input type="text" name="title" placeholder="Meeting Title" required>
-            <input type="date" name="meeting_date" required>
-            <input type="time" name="meeting_time" required>
-            <input type="url" name="link" placeholder="Meeting Link" required>
+<?php if (in_array($role, ['learner', 'parent'])): ?>
+    <div class="form-section">
+        <h3>📅 Request a Meeting with a Teacher</h3>
+        <form method="post">
+            <label for="teacher">Teacher Email</label>
+            <input type="text" id="teacher" name="teacher" required>
 
-            <h4>Parent Info</h4>
-            <input type="text" name="parent_name" placeholder="Parent Full Name" required>
-            <input type="email" name="parent_email" placeholder="Parent Email" required>
-            <input type="text" name="parent_phone" placeholder="Parent Phone Number" required>
+            <label for="date">Date</label>
+            <input type="date" id="date" name="date" required>
 
-            <h4>Learner Info</h4>
-            <input type="text" name="learner_name" placeholder="Learner Full Name" required>
-            <input type="email" name="learner_email" placeholder="Learner Email" required>
-            <input type="text" name="learner_phone" placeholder="Learner Phone Number" required>
+            <label for="time">Time</label>
+            <input type="time" id="time" name="time" required>
 
-            <button class="btn" type="submit">Send Invitations</button>
+            <label for="topic">Meeting Topic</label>
+            <textarea id="topic" name="topic" rows="4" required></textarea>
+
+            <button type="submit" name="schedule_meeting">Send Request</button>
         </form>
-    <?php endif; ?>
+    </div>
+<?php endif; ?>
 
-    <?php foreach ($meetings as $m): ?>
-        <div class="meeting">
-            <h4><?php echo htmlspecialchars($m['title']); ?></h4>
-            <p><strong>Date:</strong> <?php echo htmlspecialchars(is_a($m['meeting_date'], 'DateTime') ? $m['meeting_date']->format('Y-m-d') : $m['meeting_date']); ?></p>
-            <p><strong>Time:</strong> <?php echo htmlspecialchars(is_a($m['meeting_time'], 'DateTime') ? $m['meeting_time']->format('H:i') : $m['meeting_time']); ?></p>
-            <p><strong>Link:</strong> <a href="<?= htmlspecialchars($m['link']) ?>" target="_blank"><?= htmlspecialchars($m['link']) ?></a></p>
-            <p><strong>Created by:</strong> <?= htmlspecialchars($m['created_by']) ?></p>
+<div class="requests">
+    <h3><?= $role === 'teacher' ? '📝 Pending Meeting Requests' : '📋 Your Meeting Requests' ?></h3>
+    <table>
+        <tr>
+            <th>Requester</th>
+            <th>Role</th>
+            <th>Topic</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Status</th>
+            <?php if ($role === 'teacher') echo '<th>Action</th>'; ?>
+        </tr>
 
-            <?php if (!$isTeacher): ?>
-                <form method="post">
-                    <input type="hidden" name="meeting_id" value="<?= $m['id'] ?>">
-                    <div>
-                        <label><input type="radio" name="response" value="accepted" required> Accept</label>
-                        <label><input type="radio" name="response" value="declined" required> Decline</label>
-                    </div>
-                    <textarea name="reason" placeholder="Reason (if declining)..."></textarea>
-                    <button class="btn" type="submit">Respond</button>
-                </form>
-            <?php else: ?>
-                <a class="btn" href="?delete=<?= $m['id'] ?>" onclick="return confirm('Delete this meeting?')">Delete</a>
-            <?php endif; ?>
-        </div>
-    <?php endforeach; ?>
+        <?php
+        $query = $role === 'teacher'
+            ? sqlsrv_query($conn, "SELECT * FROM meetings WHERE teacher = ? ORDER BY date DESC", [$userName])
+            : sqlsrv_query($conn, "SELECT * FROM meetings WHERE requester = ? ORDER BY date DESC", [$userName]);
+
+        while ($row = sqlsrv_fetch_array($query, SQLSRV_FETCH_ASSOC)):
+        ?>
+            <tr>
+                <td><?= htmlspecialchars($row['requester']) ?></td>
+                <td><?= ucfirst(htmlspecialchars($row['role'])) ?></td>
+                <td><?= htmlspecialchars($row['topic']) ?></td>
+                <td><?= $row['date']->format('Y-m-d') ?></td>
+                <td><?= $row['time']->format('H:i') ?></td>
+                <td><?= ucfirst($row['status']) ?></td>
+
+                <?php if ($role === 'teacher' && $row['status'] === 'pending'): ?>
+                <td class="action-buttons">
+                    <form method="post">
+                        <input type="hidden" name="meeting_id" value="<?= $row['id'] ?>">
+                        <button type="submit" name="decision" value="approve">✅ Approve</button>
+                    </form>
+                    <form method="post">
+                        <input type="hidden" name="meeting_id" value="<?= $row['id'] ?>">
+                        <button type="submit" name="decision" value="reject">❌ Reject</button>
+                    </form>
+                </td>
+                <?php elseif ($role === 'teacher'): ?>
+                <td>-</td>
+                <?php endif; ?>
+            </tr>
+        <?php endwhile; ?>
+    </table>
+</div>
+
 </div>
 </body>
 </html>
