@@ -11,22 +11,28 @@ $conn = connectToDatabase();
 $role = strtolower($_SESSION['role']);
 $isTeacher = $role === 'teacher';
 
-// Fetch distinct provinces
+// Fetch provinces
 $provinceList = [];
 $provinceStmt = sqlsrv_query($conn, "SELECT DISTINCT province FROM schools");
 while ($row = sqlsrv_fetch_array($provinceStmt, SQLSRV_FETCH_ASSOC)) {
     $provinceList[] = $row['province'];
 }
 
-// Get selected province
+// All schools grouped by province
+$allSchools = [];
+$schoolQuery = sqlsrv_query($conn, "SELECT schoolName, province FROM schools");
+while ($row = sqlsrv_fetch_array($schoolQuery, SQLSRV_FETCH_ASSOC)) {
+    $allSchools[$row['province']][] = $row['schoolName'];
+}
+
 $selectedProvince = $_POST['province'] ?? '';
 $selectedSchool = $_POST['school'] ?? '';
 
-// Fetch schools under selected province
+// Fetch schools for selected province
 $schoolList = [];
 if ($selectedProvince) {
-    $schoolStmt = sqlsrv_query($conn, "SELECT schoolName FROM schools WHERE province = ?", [$selectedProvince]);
-    while ($row = sqlsrv_fetch_array($schoolStmt, SQLSRV_FETCH_ASSOC)) {
+    $stmt = sqlsrv_query($conn, "SELECT schoolName FROM schools WHERE province = ?", [$selectedProvince]);
+    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         $schoolList[] = $row['schoolName'];
     }
 }
@@ -49,9 +55,11 @@ if ($isTeacher && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $title = $_POST['title'];
         $date = $_POST['date'];
         $desc = $_POST['description'];
+        $province = $_POST['province'];
+        $school = $_POST['school'];
 
-        $sql = "UPDATE SchoolEvents SET eventTitle=?, eventDate=?, eventDescription=? WHERE eventID=?";
-        sqlsrv_query($conn, $sql, [$title, $date, $desc, $id]);
+        $sql = "UPDATE SchoolEvents SET eventTitle=?, eventDate=?, eventDescription=?, province=?, school=? WHERE eventID=?";
+        sqlsrv_query($conn, $sql, [$title, $date, $desc, $province, $school, $id]);
     }
 
     if (isset($_POST['delete'])) {
@@ -65,87 +73,87 @@ if ($isTeacher && $_SERVER['REQUEST_METHOD'] === 'POST') {
 $sql = "SELECT * FROM SchoolEvents ORDER BY eventDate";
 $result = sqlsrv_query($conn, $sql);
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <title>School Events - WeConnect</title>
-    <style>
-        body { font-family: Arial; background-color: #f4f6fb; margin: 0; padding: 30px; background-image: url('images/img12.jpg'); background-size: cover; background-position: center; background-attachment: fixed; }
-        h1 { color: #004aad; text-align: center; }
-        table { width: 90%; margin: 20px auto; border-collapse: collapse; background: #fff; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
-        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
-        form { display: inline; }
-        .form-box { max-width: 600px; margin: 30px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
-        input[type="text"], input[type="date"], select { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #aaa; border-radius: 5px; }
-        textarea { width: 100%; padding: 10px; border: 1px solid #aaa; border-radius: 5px; }
-        .btn { background: #004aad; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin: 5px 2px; }
-        .btn:hover { background: #003b80; }
-        .actions form { display: inline-block; }
-        .back-link { text-align: center; margin-top: 30px; display: block; text-decoration: none; color: white; background-color: #004aad; padding: 10px 20px; width: fit-content; border-radius: 5px; margin-left: auto; margin-right: auto; }
-    </style>
-</head>
-<body>
 
-<h1>🎉 School Events</h1>
+<div style="padding: 20px;">
+    <h2 style="color:#004aad; text-align:center;">🎉 School Events</h2>
 
-<?php if ($isTeacher): ?>
-<div class="form-box">
-    <h3>Add New Event</h3>
-    <form method="POST">
-        <label>Select Province</label>
-        <select name="province" onchange="this.form.submit()" required>
-            <option value="">-- Choose Province --</option>
-            <?php foreach ($provinceList as $prov): ?>
-                <option value="<?= $prov ?>" <?= $selectedProvince == $prov ? 'selected' : '' ?>><?= $prov ?></option>
-            <?php endforeach; ?>
-        </select>
-
-        <label>Select School</label>
-        <select name="school" required>
-            <option value="">-- Choose School --</option>
-            <?php foreach ($schoolList as $sch): ?>
-                <option value="<?= $sch ?>" <?= $selectedSchool == $sch ? 'selected' : '' ?>><?= $sch ?></option>
-            <?php endforeach; ?>
-        </select>
-
-        <input type="text" name="title" placeholder="Event Title" required>
-        <input type="date" name="date" required>
-        <textarea name="description" placeholder="Event Description" required></textarea>
-        <button type="submit" name="add" class="btn">Add Event</button>
-    </form>
-</div>
-<?php endif; ?>
-
-<table>
-    <tr>
-        <th>Date</th>
-        <th>Title</th>
-        <th>Description</th>
-        <th>Province</th>
-        <th>School</th>
-        <?php if ($isTeacher) echo "<th>Actions</th>"; ?>
-    </tr>
-    <?php while ($row = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)): ?>
-    <tr>
+    <?php if ($isTeacher): ?>
+    <div style="max-width:700px; margin:auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:30px;">
+        <h3 style="color:#004aad;">➕ Add New Event</h3>
         <form method="POST">
-            <td><input type="date" name="date" value="<?= $row['eventDate']->format('Y-m-d') ?>" <?= !$isTeacher ? 'readonly' : '' ?>></td>
-            <td><input type="text" name="title" value="<?= htmlspecialchars($row['eventTitle']) ?>" <?= !$isTeacher ? 'readonly' : '' ?>></td>
-            <td><textarea name="description" <?= !$isTeacher ? 'readonly' : '' ?>><?= htmlspecialchars($row['eventDescription']) ?></textarea></td>
-            <td><?= htmlspecialchars($row['province'] ?? '-') ?></td>
-            <td><?= htmlspecialchars($row['school'] ?? '-') ?></td>
-            <?php if ($isTeacher): ?>
-            <td class="actions">
-                <input type="hidden" name="eventID" value="<?= $row['eventID'] ?>">
-                <button type="submit" name="update" class="btn">Update</button>
-                <button type="submit" name="delete" class="btn" onclick="return confirm('Are you sure?')">Delete</button>
-            </td>
-            <?php endif; ?>
+            <label>Select Province</label>
+            <select name="province" onchange="this.form.submit()" required style="width:100%; padding:10px; margin-bottom:10px;">
+                <option value="">-- Choose Province --</option>
+                <?php foreach ($provinceList as $prov): ?>
+                    <option value="<?= $prov ?>" <?= $selectedProvince == $prov ? 'selected' : '' ?>><?= $prov ?></option>
+                <?php endforeach; ?>
+            </select>
+
+            <label>Select School</label>
+            <select name="school" required style="width:100%; padding:10px; margin-bottom:10px;">
+                <option value="">-- Choose School --</option>
+                <?php foreach ($schoolList as $sch): ?>
+                    <option value="<?= $sch ?>" <?= $selectedSchool == $sch ? 'selected' : '' ?>><?= $sch ?></option>
+                <?php endforeach; ?>
+            </select>
+
+            <input type="text" name="title" placeholder="Event Title" required style="width:100%; padding:10px; margin-bottom:10px;">
+            <input type="date" name="date" required style="width:100%; padding:10px; margin-bottom:10px;">
+            <textarea name="description" placeholder="Event Description" required style="width:100%; padding:10px; margin-bottom:10px;"></textarea>
+            <button type="submit" name="add" style="background:#004aad; color:white; padding:10px 20px; border:none; border-radius:5px;">Add Event</button>
         </form>
-    </tr>
-    <?php endwhile; ?>
-</table>
+    </div>
+    <?php endif; ?>
 
-<a href="dashboard.php" class="back-link">← About Us</a>
-
-</body>
-</html>
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; background:#fff; box-shadow:0 2px 10px rgba(0,0,0,0.05); border-radius:8px;">
+            <thead>
+                <tr style="background:#004aad; color:white;">
+                    <th style="padding:10px;">Date</th>
+                    <th>Title</th>
+                    <th>Description</th>
+                    <th>Province</th>
+                    <th>School</th>
+                    <?php if ($isTeacher): ?><th>Actions</th><?php endif; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while ($row = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)): ?>
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <form method="POST">
+                        <td><input type="date" name="date" value="<?= $row['eventDate']->format('Y-m-d') ?>" style="padding:6px;"></td>
+                        <td><input type="text" name="title" value="<?= htmlspecialchars($row['eventTitle']) ?>" style="padding:6px;"></td>
+                        <td><textarea name="description" style="padding:6px;"><?= htmlspecialchars($row['eventDescription']) ?></textarea></td>
+                        <td>
+                            <select name="province" style="padding:6px;">
+                                <option value="">-- Select --</option>
+                                <?php foreach ($provinceList as $prov): ?>
+                                    <option value="<?= $prov ?>" <?= ($row['province'] == $prov) ? 'selected' : '' ?>><?= $prov ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                        <td>
+                            <select name="school" style="padding:6px;">
+                                <option value="">-- Select --</option>
+                                <?php
+                                $currentProv = $row['province'];
+                                $schoolsForProv = $allSchools[$currentProv] ?? [];
+                                foreach ($schoolsForProv as $schoolName): ?>
+                                    <option value="<?= $schoolName ?>" <?= ($row['school'] == $schoolName) ? 'selected' : '' ?>><?= $schoolName ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                        <?php if ($isTeacher): ?>
+                        <td>
+                            <input type="hidden" name="eventID" value="<?= $row['eventID'] ?>">
+                            <button type="submit" name="update" style="background:#004aad; color:white; border:none; padding:5px 10px; margin:3px; border-radius:5px;">Update</button>
+                            <button type="submit" name="delete" onclick="return confirm('Are you sure?')" style="background:red; color:white; border:none; padding:5px 10px; margin:3px; border-radius:5px;">Delete</button>
+                        </td>
+                        <?php endif; ?>
+                    </form>
+                </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+    </div>
+</div>

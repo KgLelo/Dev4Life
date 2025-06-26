@@ -5,7 +5,7 @@ if (!isset($_SESSION['userName']) || !isset($_SESSION['role'])) {
   exit();
 }
 $userName = $_SESSION['userName'];
-$role = ucfirst($_SESSION['role']);
+$role = strtolower($_SESSION['role']); // make role lowercase for easy checking
 
 $allowed_pages = [
   'school_calendar',
@@ -13,20 +13,22 @@ $allowed_pages = [
   'meetings',
   'school_events',
   'exams/Tests',
-  'news/Announcements', 
-  'testimonials'  
+  'news/Announcements',
+  'testimonials',
+  'teacher_meetinginvitation'
 ];
 
 $page = isset($_GET['page']) && in_array($_GET['page'], $allowed_pages) ? $_GET['page'] : 'welcome';
 
-$page_file_map = [ // Mapping for news feature
+$page_file_map = [
   'school_calendar' => 'school_calendar.php',
   'study_materials' => 'study_materials.php',
-  'meetings' => 'meetings.php',
+  'meetings' => 'meetings.php',  // Used for both roles, depending on menu
   'school_events' => 'school_events.php',
   'exams/Tests' => 'exams_tests.php',
-  'news/Announcements' => 'news.php', 
-  'testimonials' => 'testimonials.php',  
+  'news/Announcements' => 'news.php',
+  'testimonials' => 'testimonials.php',
+  'teacher_meetinginvitation' => 'teacher_meetinginvitation.php',
   'welcome' => 'welcome.php'
 ];
 ?>
@@ -76,6 +78,24 @@ $page_file_map = [ // Mapping for news feature
       background-color: rgba(255, 255, 255, 0.2);
       font-weight: bold;
     }
+    .dropdown-content {
+      display: none;
+      flex-direction: column;
+      background-color: rgba(0, 74, 173, 0.8);
+      margin-left: 10px;
+    }
+    .dropdown:hover .dropdown-content {
+      display: flex;
+    }
+    .dropdown .dropdown-link {
+      padding: 8px 20px;
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .dropdown .dropdown-link:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
     .main-content {
       margin-left: 250px;
       padding: 20px;
@@ -121,9 +141,6 @@ $page_file_map = [ // Mapping for news feature
     .system-info h2, .system-info h3 {
       color: #004aad;
     }
-    .system-info p {
-      line-height: 1.6;
-    }
     .branding {
       text-align: center;
       margin-bottom: 30px;
@@ -151,14 +168,30 @@ $page_file_map = [ // Mapping for news feature
           'meetings' => '🧑‍🏫',
           'school_events' => '🎉',
           'exams/Tests' => '📝',
-          'news/Announcements' => '📰', 
-          'testimonials' => '💬'  
+          'news/Announcements' => '📰',
+          'testimonials' => '💬'
         ];
+
         foreach ($allowed_pages as $p) {
           $active = ($page === $p) ? 'active' : '';
           $label = ucwords(str_replace('_', ' ', $p));
           $icon = $icons[$p] ?? '📌';
-          echo "<a href='dashboard.php?page=$p' class='$active'>$icon $label</a>";
+
+          if ($p == 'meetings') {
+            echo "<div class='dropdown'>
+                    <a href='#' class='$active'>$icon Meetings ▼</a>
+                    <div class='dropdown-content'>";
+            if ($role == 'teacher') {
+              echo "<a href='dashboard.php?page=teacher_meetinginvitation' class='dropdown-link'>📅 Request a Meeting</a>";
+              echo "<a href='dashboard.php?page=meetings' class='dropdown-link'>👥 View Meeting Requests</a>";
+            } elseif ($role == 'parent' || $role == 'learner') {
+              echo "<a href='dashboard.php?page=meetings' class='dropdown-link'>📅 Request a Meeting</a>";
+              echo "<a href='dashboard.php?page=teacher_meetinginvitation' class='dropdown-link'>👥 View Meeting Requests</a>";
+            }
+            echo "</div></div>";
+          } elseif ($p !== 'teacher_meetinginvitation') {
+            echo "<a href='dashboard.php?page=$p' class='$active'>$icon $label</a>";
+          }
         }
       ?>
       <a href="logout.php" style="margin-top:20px; color:white;">🚪 Logout</a>
@@ -168,15 +201,14 @@ $page_file_map = [ // Mapping for news feature
   <div class="main-content">
     <header>
       <div>
-        Dear <strong><?php echo htmlspecialchars($role); ?></strong>, Welcome to WeConnect Dashboard
+        Dear <strong><?php echo ucfirst(htmlspecialchars($role)); ?></strong>, Welcome to WeConnect Dashboard
       </div>
       <div class="profile-card">
         👤 <strong><?php echo htmlspecialchars($userName); ?></strong><br />
-        Role: <?php echo htmlspecialchars($role); ?>
+        Role: <?php echo ucfirst(htmlspecialchars($role)); ?>
       </div>
     </header>
 
-    <!-- Branding/logo section -->
     <div class="branding">
       <img src="images/logo.png" alt="WeConnect Logo">
       <h3>The Future is Bright With Us!</h3>
@@ -192,20 +224,10 @@ $page_file_map = [ // Mapping for news feature
           echo '
           <div class="system-info">
             <h2>🌐 Welcome to WeConnect</h2>
-            <p><strong>System Version:</strong> 1.0.0</p>
             <p><strong>Mission:</strong> To connect learners, teachers, and parents in a collaborative online environment that empowers every learner to reach their full academic potential.</p>
             <p><strong>Vision:</strong> To become the leading digital education platform in Africa by promoting inclusive, quality education and leveraging technology to bridge communication gaps between learners, parents, and educators.</p>
-            
             <h3>📖 Background</h3>
-            <p>
-              WeConnect is an innovative online platform designed to empower learners by connecting them with teachers and parents to enhance their educational experience. 
-              It allows learners to engage with their studies at their own pace and preferred time, promoting flexible and personalized learning.
-            </p>
-            <p>
-              The system is primarily focused on improving the quality of education and providing learners with the best possible opportunity to succeed academically and build a brighter future. 
-              Through WeConnect, teachers can collaborate closely with both learners and parents, offering tailored guidance and support. 
-              This collaboration helps identify and address learning challenges, ensuring that every learner receives the encouragement and resources needed to overcome obstacles and achieve their full potential.
-            </p>
+            <p>WeConnect is an innovative online platform designed to empower learners by connecting them with teachers and parents to enhance their educational experience.</p>
           </div>';
         }
       ?>

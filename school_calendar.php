@@ -1,5 +1,5 @@
 <?php
-//session_start();
+if (!isset($_SESSION)) session_start();
 if (!isset($_SESSION['userName']) || !isset($_SESSION['role'])) {
     header("Location: login.php");
     exit();
@@ -21,164 +21,23 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>School Calendar - WeConnect</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f8fb;
-      margin: 0;
-      padding: 20px;
-      background-image: url('images/img12.jpg');
-      background-size: cover;
-      background-position: center;
-      background-attachment: fixed;
-    }
 
-    header {
-      background-color: #004aad;
-      color: white;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px;
-    }
+<div style="padding: 20px;">
+  <h2 style="color: #004aad; margin-bottom: 15px;">📅 School Calendar</h2>
 
-    header h1 {
-      margin: 0;
-    }
-
-    .back-btn {
-      background-color: #fff;
-      color: #004aad;
-      padding: 10px 15px;
-      text-decoration: none;
-      border-radius: 5px;
-      font-weight: bold;
-      transition: background 0.3s ease;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 30px auto;
-      padding: 20px;
-      background-color: white;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      text-align: center;
-      gap: 5px;
-    }
-
-    .calendar-grid div {
-      padding: 10px;
-      border-radius: 5px;
-      position: relative;
-    }
-
-    .day-name {
-      font-weight: bold;
-      background-color: #e0e7f4;
-    }
-
-    .day {
-      cursor: pointer;
-      background-color: #f9f9f9;
-      border: 1px solid #ddd;
-    }
-
-    .holiday-public {
-      background-color: #ffdddd;
-      border: 2px solid #ff5555;
-    }
-
-    .holiday-school {
-      background-color: #fffcc9;
-      border: 2px solid #cccc66;
-    }
-
-    .holiday-event {
-      background-color: #e0ffe0;
-      border: 2px solid #33cc33;
-    }
-
-    .today {
-      border: 3px solid #004aad;
-      background-color: #cce5ff;
-    }
-
-    .legend span {
-      display: inline-block;
-      width: 15px;
-      height: 15px;
-      margin-right: 8px;
-      border-radius: 3px;
-    }
-
-    .public { background-color: #ffdddd; }
-    .school { background-color: #fffcc9; }
-    .event { background-color: #e0ffe0; }
-    .today-mark { background-color: #cce5ff; border: 1px solid #004aad; }
-
-    .legend {
-      margin-top: 15px;
-      font-size: 0.95em;
-    }
-
-    .calendar-nav {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .calendar-nav button {
-      padding: 8px 15px;
-      margin: 0 10px;
-      background-color: #004aad;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .calendar-nav button:hover {
-      background-color: #003579;
-    }
-
-    .back-btn:hover {
-      background-color: #e6e6e6;
-    }
-  </style>
-</head>
-<body>
-
-<header>
-  <h1>📅 School Holidays & Events Calendar</h1>
-  <a href="dashboard.php" class="back-btn">← About Us!</a>
-</header>
-
-<div class="container">
-  <div class="calendar-nav">
-    <button onclick="changeMonth(-1)">← Previous</button>
-    <strong id="monthYearLabel"></strong>
-    <button onclick="changeMonth(1)">Next →</button>
+  <div style="margin-bottom: 20px; text-align: center;">
+    <button onclick="changeMonth(-1)" style="padding: 8px 16px; margin-right: 10px; background: #004aad; color: #fff; border: none; border-radius: 5px;">← Previous</button>
+    <strong id="monthYearLabel" style="font-size: 18px; color: #333;"></strong>
+    <button onclick="changeMonth(1)" style="padding: 8px 16px; margin-left: 10px; background: #004aad; color: #fff; border: none; border-radius: 5px;">Next →</button>
   </div>
 
-  <div class="calendar-grid" id="calendar"></div>
+  <div id="calendar" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; background: #fff; padding: 10px; border-radius: 8px;"></div>
 
-  <div class="legend">
-    <p>
-      <span class="public"></span> Public Holiday &nbsp;&nbsp;
-      <span class="school"></span> School Holiday &nbsp;&nbsp;
-      <span class="event"></span> School Event &nbsp;&nbsp;
-      <span class="today-mark"></span> Today
-    </p>
+  <div style="text-align: center; margin-top: 20px; font-size: 14px;">
+    <span style="display: inline-block; width: 15px; height: 15px; background: #ffdddd; margin-right: 5px; border-radius: 3px;"></span> Public Holiday &nbsp;&nbsp;
+    <span style="display: inline-block; width: 15px; height: 15px; background: #fffcc9; margin-right: 5px; border-radius: 3px;"></span> School Holiday &nbsp;&nbsp;
+    <span style="display: inline-block; width: 15px; height: 15px; background: #e0ffe0; margin-right: 5px; border-radius: 3px;"></span> School Event &nbsp;&nbsp;
+    <span style="display: inline-block; width: 15px; height: 15px; background: #cce5ff; border: 1px solid #004aad; margin-right: 5px; border-radius: 3px;"></span> Current Date
   </div>
 </div>
 
@@ -235,36 +94,55 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     dayNames.forEach(d => {
       const dayEl = document.createElement("div");
       dayEl.textContent = d;
-      dayEl.classList.add("day-name");
+      dayEl.style.fontWeight = 'bold';
+      dayEl.style.background = '#e1e7f8';
+      dayEl.style.color = '#004aad';
+      dayEl.style.borderRadius = '6px';
+      dayEl.style.padding = '10px';
       calendarEl.appendChild(dayEl);
     });
 
-    for (let i = 0; i < startDay; i++) calendarEl.appendChild(document.createElement("div"));
+    for (let i = 0; i < startDay; i++) {
+      const empty = document.createElement("div");
+      calendarEl.appendChild(empty);
+    }
 
     for (let day = 1; day <= lastDay.getDate(); day++) {
       const date = new Date(year, month, day);
       const dateKey = formatLocalDateKey(date);
       const dayDiv = document.createElement("div");
-      dayDiv.classList.add("day");
       dayDiv.textContent = day;
+      dayDiv.style.padding = '10px';
+      dayDiv.style.border = '1px solid #ddd';
+      dayDiv.style.borderRadius = '6px';
+      dayDiv.style.cursor = 'pointer';
+      dayDiv.style.transition = 'background 0.3s ease';
 
-      if (dateKey === todayStr) dayDiv.classList.add("today");
+      if (dateKey === todayStr) {
+        dayDiv.style.border = '2px solid #004aad';
+        dayDiv.style.background = '#cce5ff';
+        dayDiv.style.fontWeight = 'bold';
+      }
+
       if (publicHolidays[dateKey]) {
-        dayDiv.classList.add("holiday-public");
+        dayDiv.style.background = '#ffdddd';
+        dayDiv.style.border = '2px solid #ff5555';
         dayDiv.title = publicHolidays[dateKey];
         dayDiv.onclick = () => alert("📍 Public Holiday: " + publicHolidays[dateKey]);
       }
 
       const schoolHoliday = isSchoolHoliday(dateKey);
       if (schoolHoliday) {
-        dayDiv.classList.add("holiday-school");
+        dayDiv.style.background = '#fffcc9';
+        dayDiv.style.border = '2px solid #cccc66';
         dayDiv.title = schoolHoliday.name;
         dayDiv.onclick = () => alert("📚 School Holiday: " + schoolHoliday.name);
       }
 
       const event = schoolEvents.find(e => e.date === dateKey);
       if (event) {
-        dayDiv.classList.add("holiday-event");
+        dayDiv.style.background = '#e0ffe0';
+        dayDiv.style.border = '2px solid #33cc33';
         dayDiv.title = event.title;
         dayDiv.onclick = () => alert("🎉 School Event: " + event.title);
       }
@@ -280,6 +158,3 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 
   renderCalendar();
 </script>
-
-</body>
-</html>
